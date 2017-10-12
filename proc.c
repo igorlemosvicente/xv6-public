@@ -71,7 +71,7 @@ myproc(void) {
 // state required to run in the kernel.
 // Otherwise return 0.
 static struct proc*
-allocproc(void)
+allocproc(int tickets_number)
 {
   struct proc *p;
   char *sp;
@@ -88,6 +88,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  tickets_number %= 100;
+  p->tickets = tickets_number ? tickets_number : DEFAULT_TICKETS_NUMBER;
 
   release(&ptable.lock);
 
@@ -123,8 +125,8 @@ userinit(void)
   struct proc *p;
   extern char _binary_initcode_start[], _binary_initcode_size[];
 
-  p = allocproc();
-  
+  p = allocproc(rand());
+
   initproc = p;
   if((p->pgdir = setupkvm()) == 0)
     panic("userinit: out of memory?");
@@ -185,7 +187,7 @@ fork(void)
   struct proc *curproc = myproc();
 
   // Allocate process.
-  if((np = allocproc()) == 0){
+  if((np = allocproc(rand())) == 0){
     return -1;
   }
 
@@ -311,6 +313,12 @@ wait(void)
   }
 }
 
+int randstate = 1;
+int rand() {
+  randstate = (randstate * 14525 + 10139) % 10000;
+  return randstate;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -319,29 +327,49 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-void
-scheduler(void)
-{
+void scheduler(void) {
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  struct proc* lista_runnable[NPROC];
+  int indice_lista_runnables, soma_tickets, i, ticket_sorteado, tickets_passados;
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
+    indice_lista_runnables = 0;
+    soma_tickets = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state == RUNNABLE) {
+        lista_runnable[indice_lista_runnables++] = p;
+        soma_tickets += p->tickets;
+      }
+    }
+    if (soma_tickets > 0) {
+      ticket_sorteado = rand() % soma_tickets;
+      tickets_passados = 0;
+      for (i = 0; tickets_passados <= ticket_sorteado; i++) {
+        p = lista_runnable[i];
+        tickets_passados += p->tickets;
+      }
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       c->proc = p;
       switchuvm(p);
       p->state = RUNNING;
+
+      // PRINTADA ============================================
+      // int aux = soma_tickets;
+      // for(i = 0; aux; i++) {
+      //   aux -= lista_runnable[i]->tickets;
+      //   cprintf("%s (%d) | ", lista_runnable[i]->name, lista_runnable[i]->tickets);
+      // }
+      // cprintf("\n");
+      // cprintf("Processo escolhido pelo escalonador: %s\nPID: %d\nSorteio: %d\n\n", p->name, p->tickets, p->pid, ticket_sorteado);
+      //  =====================================================
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -523,7 +551,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
+    cprintf("%d \t%s \t%s \t%d", p->pid, state, p->name, p->tickets);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
