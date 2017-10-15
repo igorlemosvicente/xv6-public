@@ -268,7 +268,8 @@ exit(void)
     Vezes que o processo foi cogitado: %d\n \
     Vezes que fora escolhido: %d\n \
     Média de tickets totais na escolha %d/%d\n \
-    Porcentagem média de escolha do processo: %d.0 * %d.0 / (%d.0 / %d.0) * 100.0\n\n",
+    Probabilidade média de escolha do processo: %d.0 / (%d.0 / %d.0) * 100.0\n \
+    Porcentagem de escolha do processo: %d / %d * 100.0\n\n",
     curproc->pid,
     curproc->name,
     curproc->tickets,
@@ -276,7 +277,8 @@ exit(void)
     curproc->cogitado,
     curproc->escolhido,
     curproc->tickets_soma, curproc->cogitado,
-    curproc->escolhido, curproc->tickets, curproc->tickets_soma, curproc->cogitado);
+    curproc->tickets, curproc->tickets_soma, curproc->cogitado,
+    curproc->escolhido, curproc->cogitado);
   // }TESTE
 
   // Pass abandoned children to init.
@@ -340,8 +342,8 @@ wait(void)
 
 int randstate = 1;
 int rand() {
-  randstate = (randstate * 14525 + 10139) % 10000;
-  return randstate;
+  randstate = randstate * 1664525 + 113904223;
+  return randstate < 0 ? randstate * -1 : randstate;
 }
 
 //PAGEBREAK: 42
@@ -376,16 +378,18 @@ void scheduler(void) {
     if (soma_tickets > 0) {
       ticket_sorteado = rand() % soma_tickets;
       tickets_passados = 0;
-      for (i = 0; tickets_passados <= ticket_sorteado; i++) {
+      for (i = 0; tickets_passados < ticket_sorteado; i++) {
         p = lista_runnable[i];
         tickets_passados += p->tickets;
       }
 
       // TESTE{
       for (aux = ptable.proc; aux < &ptable.proc[NPROC]; aux++) {
-        aux->tickets_soma += soma_tickets;
-        aux->escolhido += aux == p ? 1 : 0;
-        aux->cogitado += 1;
+        if (p->state == RUNNABLE) {
+          aux->tickets_soma += soma_tickets;
+          aux->escolhido += aux == p ? 1 : 0;
+          aux->cogitado += 1;
+        }
       }
       // }TESTE
 
