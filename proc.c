@@ -259,7 +259,8 @@ exit(void)
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
 
-  // TESTE{
+  /** TESTE{
+  impressão para humanos
   cprintf("Processo sendo encerrado =============\n \
     ID: %d\n \
     Nome: %s\n \
@@ -278,7 +279,21 @@ exit(void)
     curproc->escolhido,
     curproc->tickets_soma, curproc->cogitado,
     curproc->tickets, curproc->tickets_soma, curproc->cogitado,
-    curproc->escolhido, curproc->cogitado);
+    curproc->escolhido, curproc->cogitado
+  ); */
+
+  // Impressão para .csv
+  cprintf("%d, %s, %d, %d, %d, %d, %d/%d, %d.0 / (%d.0 / %d.0) * 100.0, %d / %d * 100.0\n",
+    curproc->pid,
+    curproc->name,
+    curproc->tickets,
+    curproc->tickets_soma,
+    curproc->cogitado,
+    curproc->escolhido,
+    curproc->tickets_soma, curproc->cogitado,
+    curproc->tickets, curproc->tickets_soma, curproc->cogitado,
+    curproc->escolhido, curproc->cogitado
+  );
   // }TESTE
 
   // Pass abandoned children to init.
