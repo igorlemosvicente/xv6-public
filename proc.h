@@ -45,6 +45,11 @@ struct proc {
   enum procstate state;        // Process state
   int pid;                     // Process ID
   int tickets;                 // Number of tickets of the process
+  // TESTE{
+  int tickets_soma;  // Variável para guardar a soma da soma de tickets distribuídos nas escolhas que o processo participou
+  int escolhido;               // Número de vezes que o processo foi escolhido
+  int cogitado;                // Número de vezes que o processo poderia ter sido escolhido
+  // }TESTE
   struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process

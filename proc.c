@@ -38,10 +38,10 @@ struct cpu*
 mycpu(void)
 {
   int apicid, i;
-  
+
   if(readeflags()&FL_IF)
     panic("mycpu called with interrupts enabled\n");
-  
+
   apicid = lapicid();
   // APIC IDs are not guaranteed to be contiguous. Maybe we should have
   // a reverse map, or reserve a register to store &cpus[i].
@@ -88,8 +88,13 @@ allocproc(int tickets_number)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  tickets_number %= 100;
+  tickets_number %= 1000;
   p->tickets = tickets_number ? tickets_number : DEFAULT_TICKETS_NUMBER;
+  // #TESTE{
+  p->tickets_soma = 0;
+  p->escolhido = 0;
+  p->cogitado = 0;
+  // }TESTE
 
   release(&ptable.lock);
 
@@ -254,6 +259,26 @@ exit(void)
   // Parent might be sleeping in wait().
   wakeup1(curproc->parent);
 
+  // TESTE{
+  cprintf("Processo sendo encerrado =============\n \
+    ID: %d\n \
+    Nome: %s\n \
+    Número de Tickets: %d\n \
+    Soma Tickets: %d\n \
+    Vezes que o processo foi cogitado: %d\n \
+    Vezes que fora escolhido: %d\n \
+    Média de tickets totais na escolha %d/%d\n \
+    Porcentagem média de escolha do processo: %d.0 * %d.0 / (%d.0 / %d.0) * 100.0\n\n",
+    curproc->pid,
+    curproc->name,
+    curproc->tickets,
+    curproc->tickets_soma,
+    curproc->cogitado,
+    curproc->escolhido,
+    curproc->tickets_soma, curproc->cogitado,
+    curproc->escolhido, curproc->tickets, curproc->tickets_soma, curproc->cogitado);
+  // }TESTE
+
   // Pass abandoned children to init.
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->parent == curproc){
@@ -277,7 +302,7 @@ wait(void)
   struct proc *p;
   int havekids, pid;
   struct proc *curproc = myproc();
-  
+
   acquire(&ptable.lock);
   for(;;){
     // Scan through table looking for exited children.
@@ -329,6 +354,7 @@ int rand() {
 //      via swtch back to the scheduler.
 void scheduler(void) {
   struct proc *p;
+  struct proc *aux;
   struct cpu *c = mycpu();
   c->proc = 0;
   struct proc* lista_runnable[NPROC];
@@ -354,6 +380,15 @@ void scheduler(void) {
         p = lista_runnable[i];
         tickets_passados += p->tickets;
       }
+
+      // TESTE{
+      for (aux = ptable.proc; aux < &ptable.proc[NPROC]; aux++) {
+        aux->tickets_soma += soma_tickets;
+        aux->escolhido += aux == p ? 1 : 0;
+        aux->cogitado += 1;
+      }
+      // }TESTE
+
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -446,7 +481,7 @@ void
 sleep(void *chan, struct spinlock *lk)
 {
   struct proc *p = myproc();
-  
+
   if(p == 0)
     panic("sleep");
 

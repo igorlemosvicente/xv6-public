@@ -17,7 +17,7 @@ int main(void) {
   if (!pid) { // If do filho
     int i;
     // printf(OUTPUT_STREAM, "Filho: %d\n", getpid());
-    while(i++ < 5000000000);
+    while(i++ < 500000000);
   } else if (pid > 0) {
     // printf(OUTPUT_STREAM, "Pai: %d\n", getpid());
     // printf(OUTPUT_STREAM, "Esperando filho terminar.\n");
