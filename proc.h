@@ -1,3 +1,5 @@
+#define DEFAULT_TICKETS_NUMBER 10
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -12,6 +14,7 @@ struct cpu {
 
 extern struct cpu cpus[NCPU];
 extern int ncpu;
+int rand(void);
 
 //PAGEBREAK: 17
 // Saved registers for kernel context switches.
@@ -41,6 +44,12 @@ struct proc {
   char *kstack;                // Bottom of kernel stack for this process
   enum procstate state;        // Process state
   int pid;                     // Process ID
+  int tickets;                 // Number of tickets of the process
+  // TESTE{
+  int tickets_soma;  // Variável para guardar a soma da soma de tickets distribuídos nas escolhas que o processo participou
+  int escolhido;               // Número de vezes que o processo foi escolhido
+  int cogitado;                // Número de vezes que o processo poderia ter sido escolhido
+  // }TESTE
   struct proc *parent;         // Parent process
   struct trapframe *tf;        // Trap frame for current syscall
   struct context *context;     // swtch() here to run process
